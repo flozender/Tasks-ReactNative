@@ -15,31 +15,27 @@ import Header from './components/header';
 import ListItem from './components/list-item';
 
 const App = () => {
+  const [state, setState] = useState({
+    tasks: [],
+  });
+  const [text, setText] = useState('');
+  const {tasks} = state;
+
   useEffect(() => {
-    async function getStoredTasks() {
-      let storedTasks = [];
+    async function getStoredState() {
       try {
-        storedTasks = await AsyncStorage.getItem('@tasks:mytasks');
-        console.log('found', storedTasks);
-        if (storedTasks !== null) {
-          setTasks(JSON.parse(storedTasks));
+        const storedState = JSON.parse(
+          await AsyncStorage.getItem('@tasks:state'),
+        );
+        if (storedState.tasks.length !== 0) {
+          setState(storedState);
         }
       } catch (err) {
         console.log('err', err);
       }
     }
-    getStoredTasks();
+    getStoredState();
   }, []);
-
-  useEffect(() => {
-    async function saveTasks() {
-      console.log('saving', tasks);
-      await AsyncStorage.setItem('@tasks:mytasks', JSON.stringify(tasks));
-    }
-    if (tasks.length) {
-      saveTasks();
-    }
-  });
 
   const addTask = async () => {
     try {
@@ -49,11 +45,16 @@ const App = () => {
         ]);
         return;
       }
-      setTasks((tasks) => tasks.concat({id: Math.random(), text: text}));
-      console.log('set', text);
-      console.log('tasks after set', tasks);
 
+      const newState = {
+        ...state,
+        tasks: [...tasks, {id: Math.random(), text: text}],
+      };
+
+      setState(newState);
       setText('');
+
+      await AsyncStorage.setItem('@tasks:state', JSON.stringify(newState));
     } catch (err) {
       console.log(err);
     }
@@ -63,12 +64,11 @@ const App = () => {
     setText(t);
   };
 
-  const deleteTask = (id) => {
-    setTasks(tasks.filter((task) => task.id !== id));
+  const deleteTask = async (id) => {
+    const newState = {...state, tasks: tasks.filter((task) => task.id !== id)};
+    setState(newState);
+    await AsyncStorage.setItem('@tasks:state', JSON.stringify(newState));
   };
-
-  const [tasks, setTasks] = useState([]);
-  const [text, setText] = useState('');
 
   return (
     <View style={styles.root}>
